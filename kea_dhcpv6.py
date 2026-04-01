@@ -108,12 +108,16 @@ def parse_reservations(reservations_str):
 
 def parse_b4_dns(b4_dns_str):
     """
-    Parses the -b4_dns argument into a list of (fqdn, ipv6) tuples.
+    Parses the -b4_dns argument into a list of (fqdn, ip) tuples.
 
-    Format: "fqdn1=ipv6_1,fqdn2=ipv6_2"
-    Example: "b4-1.dslite.local=2001:db8::b1,b4-2.dslite.local=2001:db8::b2"
+    Format: "fqdn1=ip_1,fqdn2=ip_2"
+    Supports both IPv4 and IPv6 values:
+      "b4-1.dslite.local=2001:db8::b1,server.dslite.local=10.1.0.1"
 
-    Returns list of (fqdn, ipv6) tuples used to build dnsmasq address= lines.
+    dnsmasq address= directive automatically creates AAAA records for IPv6
+    values and A records for IPv4 values.
+
+    Returns list of (fqdn, ip) tuples used to build dnsmasq address= lines.
     """
     result = []
     if not b4_dns_str:
@@ -251,8 +255,11 @@ def start_dns_server(interface, ipv6_prefix, upstream_dns, domain,
       DNS (8.8.8.8 / 2001:4860:4860::8888).
 
     b4_dns_records:
-      Optional list of (fqdn, ipv6) tuples for B4 nodes. Adds AAAA records
-      so nodes can be referenced by name (e.g. b4-1.dslite.local).
+      Optional list of (fqdn, ip) tuples for any testbed host. Supports
+      both IPv4 and IPv6 values -- dnsmasq creates A or AAAA records
+      automatically based on the address type. Example uses:
+        b4-1.dslite.local=2001:db8::b1   (AAAA)
+        server.dslite.local=10.1.0.1     (A)
     """
     global dns_process
 
@@ -278,13 +285,13 @@ log-queries
         dns_config += f"address=/{clean_name}/{aftr_ipv6}\n"
         print(f"DNS record added: {clean_name} -> {aftr_ipv6}")
 
-    # Add static AAAA records for B4 nodes (from -b4_dns parameter).
-    # Useful for human-readable addressing and allows referring to B4 nodes
-    # by name instead of raw IPv6 addresses.
+    # Add static DNS records for testbed hosts (from -b4_dns parameter).
+    # Supports any host/IP pair -- dnsmasq resolves IPv4 as A, IPv6 as AAAA.
+    # Useful for human-readable addressing (B4 nodes, server, etc.).
     if b4_dns_records:
-        for fqdn, ipv6 in b4_dns_records:
-            dns_config += f"address=/{fqdn}/{ipv6}\n"
-            print(f"DNS record added: {fqdn} -> {ipv6}")
+        for fqdn, ip in b4_dns_records:
+            dns_config += f"address=/{fqdn}/{ip}\n"
+            print(f"DNS record added: {fqdn} -> {ip}")
 
     if upstream_dns:
         for dns in upstream_dns.split(','):
@@ -415,9 +422,12 @@ def start_kea_dhcpv6(config_file):
     # KEA writes its PID file and logger_lockfile here.
     os.makedirs("/var/run/kea", exist_ok=True)
 
-    # Clear stale lease files so KEA re-evaluates reservations on fresh start.
-    # Without this, KEA honors old dynamic leases from previous runs even when
-    # a MAC now has a static reservation pointing to a different address.
+    # Clear stale lease files before every start.
+    # KEA persists leases in /var/lib/kea/kea-leases6.csv across restarts.
+    # When a MAC address now has a static reservation, KEA still honors the
+    # old dynamic lease for that DUID -- the client receives the dynamic
+    # address instead of the reserved one. Removing the lease DB forces KEA
+    # to evaluate reservations fresh on the next Solicit/Request exchange.
     for lf in ["/var/lib/kea/kea-leases6.csv", "/var/lib/kea/kea-leases6.csv.2"]:
         try:
             if os.path.exists(lf):
@@ -488,9 +498,9 @@ def parameter():
                              "Example: 0c:ca:02:e7:00:01=2001:db8::b1,0c:a0:a9:03:00:01=2001:db8::b2 "
                              "Get MAC addresses with: ip link show ens4  (on each B4 node)")
     parser.add_argument("-b4_dns", dest="b4_dns",
-                        help="Static DNS records for B4 nodes: FQDN=IPv6 pairs, comma-separated. "
-                             "Adds AAAA records to dnsmasq so B4 nodes can be resolved by name. "
-                             "Example: b4-1.dslite.local=2001:db8::b1,b4-2.dslite.local=2001:db8::b2")
+                        help="Static DNS records for testbed hosts: FQDN=IP pairs, comma-separated. "
+                             "Supports both IPv4 (A records) and IPv6 (AAAA records). "
+                             "Example: b4-1.dslite.local=2001:db8::b1,server.dslite.local=10.1.0.1")
     parser.add_argument("-no-dns", dest="no_dns", action="store_true",
                         help="Disable the built-in dnsmasq DNS forwarder.")
 

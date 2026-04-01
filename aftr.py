@@ -28,9 +28,11 @@ Role in DS-Lite:
     traffic going back out through another tunnel is not NATed -- it just
     gets re-encapsulated and forwarded.
 
-  IMPORTANT: B4 nodes get their IPv6 addresses dynamically from DHCPv6.
-    The addresses change after every restart. AFTR must be launched AFTER
-    all B4 nodes are running and their IPv6 addresses are known.
+  With KEA static reservations (-reservations in kea_dhcpv6.py), each B4
+    always receives the same IPv6 address after every restart, so the AFTR
+    command never changes. Without reservations, B4 addresses are assigned
+    dynamically and may change on restart -- AFTR must then be relaunched
+    with the updated addresses.
 
   With -aftr parameter, the script also assigns the AFTR IPv6 address to
   the tunnel interface automatically -- no manual 'ip -6 addr add' needed.

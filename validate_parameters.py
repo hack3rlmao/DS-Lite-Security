@@ -11,7 +11,7 @@ import ipaddress
 import netifaces
 
 def get_ipv4_addresses(interface):
-    """Získá seznam IPv4 adres přiřazených k danému rozhraní."""
+    """Returns a list of IPv4 addresses (with prefix) assigned to the interface."""
     try:
         result = subprocess.run(
             ["ip", "-4", "addr", "show", interface],
@@ -28,7 +28,7 @@ def get_ipv4_addresses(interface):
         return None
 
 def get_ipv6_addresses(interface):
-    """Získá seznam IPv6 adres přiřazených k danému rozhraní."""
+    """Returns a list of IPv6 addresses (with prefix) assigned to the interface."""
     try:
         result = subprocess.run(
             ["ip", "-6", "addr", "show", interface],
@@ -46,7 +46,7 @@ def get_ipv6_addresses(interface):
         return None
 
 def add_ipv6_address(interface, ipv6_addr):
-    """Přidá IPv6 adresu na dané rozhraní."""
+    """Adds an IPv6 address to the interface. No-op if the address is already assigned."""
     try:
         current_addrs = get_ipv6_addresses(interface)
         if current_addrs and ipv6_addr in current_addrs:
@@ -61,7 +61,7 @@ def add_ipv6_address(interface, ipv6_addr):
         return False
 
 def is_valid_ipv4_network(network_str):
-    """Ověří, zda je řetězec platná IPv4 síť v CIDR notaci."""
+    """Returns True if the string is a valid IPv4 network in CIDR notation."""
     try:
         ipaddress.IPv4Network(network_str, strict=False)
         return True
@@ -69,7 +69,7 @@ def is_valid_ipv4_network(network_str):
         return False
 
 def is_valid_ipv6(addr_str):
-    """Ověří, zda je řetězec platná IPv6 adresa."""
+    """Returns True if the string is a valid IPv6 address (with or without prefix length)."""
     try:
         if '/' in addr_str:
             addr_str = addr_str.split('/')[0]
@@ -79,7 +79,7 @@ def is_valid_ipv6(addr_str):
         return False
 
 def is_valid_num(num_str):
-    """Ověří, zda je řetězec platné kladné celé číslo."""
+    """Returns True if the string represents a positive integer."""
     try:
         val = int(num_str)
         return val > 0
@@ -87,7 +87,7 @@ def is_valid_num(num_str):
         return False
 
 def is_valid_ipv4_range(range_str):
-    """Ověří, zda je řetězec platný rozsah IPv4 pro DHCP."""
+    """Returns True if the string is a valid IPv4 DHCP range (start-end, start < end)."""
     try:
         if '-' not in range_str:
             return False
@@ -99,7 +99,7 @@ def is_valid_ipv4_range(range_str):
         return False
 
 def is_valid_ipv6_prefix(prefix_str):
-    """Ověří platnost IPv6 prefixu."""
+    """Returns True if the string is a valid IPv6 prefix in CIDR notation."""
     try:
         network = ipaddress.IPv6Network(prefix_str, strict=False)
         return network.prefixlen <= 128
@@ -107,7 +107,7 @@ def is_valid_ipv6_prefix(prefix_str):
         return False
 
 def is_valid_ipv4_addr(addr_str):
-    """Ověří IPv4 adresu."""
+    """Returns True if the string is a valid IPv4 address."""
     try:
         ipaddress.IPv4Address(addr_str)
         return True
@@ -115,7 +115,7 @@ def is_valid_ipv4_addr(addr_str):
         return False
 
 def is_valid_fqdn(fqdn):
-    """Ověří, zda je řetězec platný FQDN."""
+    """Returns True if the string is a valid FQDN (max 253 chars, labels max 63 chars)."""
     if not fqdn or len(fqdn) > 253:
         return False
     if '.' not in fqdn:
@@ -129,7 +129,7 @@ def is_valid_fqdn(fqdn):
     return True
 
 def random_ipv6_addr(prefix_str):
-    """Vygeneruje náhodnou IPv6 adresu na základě zadaného prefixu."""
+    """Generates a random host IPv6 address within the given prefix."""
     try:
         network = ipaddress.IPv6Network(prefix_str, strict=False)
         prefix_len = network.prefixlen
@@ -144,11 +144,11 @@ def random_ipv6_addr(prefix_str):
         return "fe80::" + ':'.join(f'{random.randint(0, 65535):04x}' for _ in range(4))
 
 def generate_tunnel_name(base_name, index):
-    """Vygeneruje unikátní název tunelu pro daný index B4."""
+    """Generates a unique tunnel interface name for a given B4 index."""
     return f"{base_name}_b4_{index}"
 
 def get_interface_mac(interface):
-    """Pomocná funkce pro získání MAC adresy rozhraní."""
+    """Returns the MAC address of the given interface, or None if unavailable."""
     try:
         addrs = netifaces.ifaddresses(interface)
         if netifaces.AF_LINK in addrs:
