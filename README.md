@@ -444,13 +444,3 @@ The following DNS records are configured by the example command above and are re
 > **Note:** PC1 and PC2 cannot resolve `aftr.dslite.local` — this is expected. AFTR has an IPv6-only CORE address; PCs are IPv4-only clients and have no IPv6 connectivity. The AFTR is transparent to them by design.
 
 ---
-
-## Known Limitations
-
-- **Static B4 reservations require clearing the KEA lease database.** `kea_dhcpv6.py` automatically removes `/var/lib/kea/kea-leases6.csv` on startup so that new reservations take effect. This means all dynamic leases are lost on every restart — acceptable for a testbed environment.
-
-- **AFTR must be restarted if B4 IPv6 addresses change.** If static reservations are not used (`-reservations` omitted), B4 nodes may receive different addresses after each restart and the AFTR command must be updated accordingly.
-
-- **AppArmor on Ubuntu restricts `dhclient`.** The `dhclient` on B4 nodes is limited to writing lease files to `/var/lib/dhcp/`. Custom lease file paths via `-lf` are blocked by AppArmor even under `sudo`. `b4.py` handles this transparently.
-
-- **`systemd` dnsmasq on B4 nodes must be disabled.** The system-managed `dnsmasq` service binds to port 53 and prevents `b4.py` from starting its own instance. Disable it permanently: `sudo systemctl disable --now dnsmasq`.
